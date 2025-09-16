@@ -10,4 +10,5 @@ dependencies = [
     "matplotlib>=3.10.6",
     "mediapipe>=0.10.14",
     "opencv-python>=4.12.0.88",
+    "pyvista>=0.46.3",
 ]
