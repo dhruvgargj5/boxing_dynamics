@@ -1,12 +1,13 @@
-from typing import List
-from typing import Generic, TypeVar
-from abc import ABC, abstractmethod
 from pathlib import Path
 from dataclasses import dataclass
+from mediapipe.tasks.python.vision.pose_landmarker import PoseLandmarkerOptions
+import numpy as np
 
+
+from abc import ABC, abstractmethod
+from typing import Generic, TypeVar, List, NamedTuple, Optional
 import logging
 
-import numpy as np
 
 InputType = TypeVar("InputType")
 OutputType = TypeVar("OutputType")
@@ -24,12 +25,20 @@ class StageBase(ABC, Generic[InputType, OutputType]):
 class VideoConfiguration:
     name : str
     path: Path
-    scale_factor: float | None
+    scale_factor: Optional[float] = None
+
+class Frame(NamedTuple):
+    frame: np.ndarray
+    timestamp_ms: int
 
 @dataclass
 class VideoData:
-    frames: np.ndarray
+    frames: List[Frame]
     fps: float
+
+class LandmarkingStageInput(NamedTuple):
+    video_data: VideoData
+    landmarking_options: PoseLandmarkerOptions
 
 
 class BoxingDynamicsPipeline:

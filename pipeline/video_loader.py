@@ -1,13 +1,12 @@
-import mediapipe as mp
-from mediapipe import solutions
-from mediapipe.framework.formats import landmark_pb2
 import cv2
 import numpy as np
 
-from pathlib import Path
-from dataclasses import dataclass
-
-from pipeline.pipeline import StageBase, VideoConfiguration, VideoData
+from pipeline.pipeline import (
+    StageBase,
+    VideoConfiguration,
+    VideoData,
+    Frame,
+)
 
 
 class VideoLoader(StageBase[VideoConfiguration, VideoData]):
@@ -37,7 +36,13 @@ class VideoLoader(StageBase[VideoConfiguration, VideoData]):
                     fy=input.scale_factor,
                 )
             cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frames.append(frame)
+            frames.append(
+                Frame(frame, int(cap.get(cv2.CAP_PROP_POS_MSEC)))
+            )
         cap.release()
 
-        return VideoData(frames=np.asarray(frames), fps=fps)
+        self.logger.info(
+            f"Loaded {len(frames)} frames from {str(input.path)}"
+        )
+
+        return VideoData(frames=frames, fps=fps)
