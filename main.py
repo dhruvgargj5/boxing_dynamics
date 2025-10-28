@@ -12,6 +12,10 @@ from pipeline.pipeline import (
 )
 from pipeline.video_loader import VideoLoader
 from pipeline.landmarking import ExtractHumanPoseLandmarks
+from pipeline.kinematics_extractor import (
+    ExtractWorldLandmarkLinearKinematics,
+    ExtractJointAngularKinematics,
+)
 
 
 @click.command()
@@ -37,7 +41,12 @@ def main(debug_logging: bool):
     )
 
     pipeline = BoxingDynamicsPipeline(
-        [VideoLoader(), ExtractHumanPoseLandmarks()]
+        [
+            VideoLoader(),
+            ExtractHumanPoseLandmarks(),
+            ExtractWorldLandmarkLinearKinematics(),
+            ExtractJointAngularKinematics(),
+        ]
     )
 
     pipeline.run(first_input)
