@@ -5,9 +5,16 @@ from dataclasses import dataclass
 
 @dataclass
 class Joint:
+    index: int
     parent_landmark: PoseLandmark
     joint_landmark: PoseLandmark
     child_landmark: PoseLandmark
+
+    def get_proximal_limb_landmark_indexes(self):
+        return [self.parent_landmark.value, self.joint_landmark.value]
+
+    def get_distal_limb_landmark_indexes(self):
+        return [self.joint_landmark.value, self.child_landmark.value]
 
 
 joint_definitions = [
@@ -34,6 +41,8 @@ joint_definitions = [
 ]
 
 JOINTS = {
-    target_joint: Joint(parent, target_joint, child)
-    for parent, target_joint, child in joint_definitions
+    target_joint: Joint(ii, parent, target_joint, child)
+    for ii, (parent, target_joint, child) in enumerate(
+        joint_definitions
+    )
 }

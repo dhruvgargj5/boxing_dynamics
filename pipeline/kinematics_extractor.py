@@ -3,6 +3,7 @@ import mediapipe as mp
 from mediapipe.tasks.python.vision.pose_landmarker import (
     PoseLandmarkerResult,
 )
+from mediapipe.python.solutions.pose import PoseLandmark
 
 from pipeline.pipeline import (
     StageBase,
@@ -10,6 +11,8 @@ from pipeline.pipeline import (
     AngularKinematicVariables,
     JointAngularKinematicVariables,
 )
+
+from utils.joints import JOINTS, Joint
 
 from typing import List
 
@@ -38,10 +41,36 @@ class ExtractJointAngularKinematics(
     def execute(
         self, input: WorldLandmarkLinearKinematicVariables
     ) -> JointAngularKinematicVariables:
-        joint_3d_angles = np.zeros_like(input.position)
+
+        desired_joints = [
+            PoseLandmark.LEFT_ELBOW,
+            PoseLandmark.RIGHT_ELBOW,
+            PoseLandmark.LEFT_KNEE,
+            PoseLandmark.RIGHT_KNEE,
+        ]
+        joint_3d_angles = np.zeros(
+            (input.position.shape[0], len(desired_joints))
+        )
+
+        for joint in desired_joints:
+            proximal_limb_vector = input.position[:, JOINTS[joint].parent_landmark] - input.position[:, JOINTS[joint].joint_landmark]
+            distal_limb_vector = input.position[:, JOINTS[joint].joint_landmark] - input.position[:, JOINTS[joint].child_landmark]
+            angle = calculate_nominal_joint_angles_from_time_series(
+                proximal_limb_vector, distal_limb_vector
+            )
+            joint_3d_angles[:, JOINTS[joint].index] = angle
+
         return JointAngularKinematicVariables(
             AngularKinematicVariables(joint_3d_angles)
         )
+
+
+def calculate_nominal_joint_angles_from_time_series(proximal_vec_over_time, distal_vec_over_time):
+    dot_product = np.einsum("ij,ij->i", proximal_vec_over_time, distal_vec_over_time)
+    similarity = dot_product / (
+        np.linalg.norm(proximal_vec_over_time, axis=1) * np.linalg.norm(distal_vec_over_time, axis=1)
+    )
+    return np.arccos(similarity)
 
 
 def mediapipe_human_frame_landmark_to_position_array(

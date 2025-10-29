@@ -50,8 +50,10 @@ def main(debug_logging: bool):
         name="Max's Cross Punch",
         path=Path("media/realspeed/cross.MP4"),
     )
-
+    logging.info("Starting Stage 1: VideoLoader")
     video_data = VideoLoader().execute(video_config)
+    logging.info("Finished Stage 1: VideoLoader")
+    logging.info("Starting Stage 2: ExtractHumanPoseLandmarks")
     landmarkers = ExtractHumanPoseLandmarks().execute(
         LandmarkingStageInput(
             video_data,
@@ -64,11 +66,25 @@ def main(debug_logging: bool):
             ),
         )
     )
+    logging.info("Finished Stage 2: ExtractHumanPoseLandmarks")
+    logging.info(
+        "Starting Stage 3: ExtractWorldLandmarkLinearKinematics"
+    )
+    linear_kinematics = (
+        ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
+    )
+    logging.info(
+        "Finished Stage 3: ExtractWorldLandmarkLinearKinematics"
+    )
+    logging.info("Starting Stage 4: ExtractJointAngularKinematics")
 
-    linear_kinematics = ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
-
-    joint_angle_kinematics = ExtractJointAngularKinematics().execute(linear_kinematics)
-
+    joint_angle_kinematics = ExtractJointAngularKinematics().execute(
+        linear_kinematics
+    )
+    logging.info("Finished Stage 4: ExtractJointAngularKinematics")
+    logging.info(
+        f"{joint_angle_kinematics.joint_3d_angular_kinematics.position.shape=}"
+    )
 
     logging.info("Finished BoxingDynamics pipeline")
 
