@@ -40,6 +40,7 @@ class Frame(NamedTuple):
 class VideoData:
     frames: List[Frame]
     fps: float
+    config: VideoConfiguration
 
 
 class LandmarkingStageInput(NamedTuple):
@@ -81,3 +82,5 @@ class JointAngularKinematicVariables:
 class BoxingPunchMetrics:
     right_wrist_punching_velocity_magnitude: np.ndarray
     left_wrist_punching_velocity_magnitude: np.ndarray
+    hip_rotation_velocity_magnitude: Optional[np.ndarray] = None
+    shoulder_rotation_velocity_magnitude: Optional[np.ndarray] = None

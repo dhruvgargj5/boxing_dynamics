@@ -47,4 +47,4 @@ class VideoLoader(StageBase[VideoConfiguration, VideoData]):
         )
         self.logger.info("Finished VideoLoader stage")
 
-        return VideoData(frames=frames, fps=fps)
+        return VideoData(frames=frames, fps=fps, config=input)

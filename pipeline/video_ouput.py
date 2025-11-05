@@ -9,60 +9,126 @@ from pipeline.pipeline import StageBase, VideoData, BoxingPunchMetrics
 from typing import Tuple
 from pathlib import Path
 
+
 class FuseVideoAndBoxingMetrics(
     StageBase[
         Tuple[VideoData, BoxingPunchMetrics],
         str,
     ]
 ):
-    
     def execute(
-        self, input: Tuple[VideoData, BoxingPunchMetrics], video_path: str
+        self,
+        input: Tuple[VideoData, BoxingPunchMetrics],
     ) -> str:
 
         video_data, boxing_metrics = input
 
         # Figure with two rows: top for video, bottom for metrics
-        fig = plt.figure(figsize=(14, 8))
-        gs = gridspec.GridSpec(2, 1, height_ratios=[2, 1])
-        ax_video = fig.add_subplot(gs[0])
-        ax_plot = fig.add_subplot(gs[1])
+        fig = plt.figure(figsize=(14, 6))
+        gs = gridspec.GridSpec(2, 2, figure=fig, width_ratios=[1,3])
+
+        ax_video = fig.add_subplot(gs[:, 0])
+
+        ax_punch = fig.add_subplot(gs[0, 1])
+        ax_rotation = fig.add_subplot(gs[1, 1])
+
+        ax_rotation.sharex(ax_punch)
 
         num_frames = len(video_data.frames)
 
-        # Plot metrics
-        left_vel = boxing_metrics.left_wrist_punching_velocity_magnitude
-        right_vel = boxing_metrics.right_wrist_punching_velocity_magnitude
+        # Plot wrist velocity metrics
+        left_vel = (
+            boxing_metrics.left_wrist_punching_velocity_magnitude
+        )
+        right_vel = (
+            boxing_metrics.right_wrist_punching_velocity_magnitude
+        )
 
-        ax_plot.set(
-            xlim=(0, num_frames),
-            ylim=(0, max(np.max(left_vel), np.max(right_vel)) * 1.1),
+        ax_punch.set(
             xlabel="Frame Index",
             ylabel="Velocity Magnitude (cm/s)",
         )
-        ax_plot.grid(True)
+        ax_punch.grid(True)
 
-        ax_plot.plot(range(num_frames), left_vel, color='blue', label="Left Wrist")
-        ax_plot.plot(range(num_frames), right_vel, color='red', label="Right Wrist")
-        ax_plot.legend(loc="upper right")
+        ax_punch.plot(
+            range(num_frames),
+            left_vel,
+            color="blue",
+            label="Left Wrist",
+        )
+        ax_punch.plot(
+            range(num_frames),
+            right_vel,
+            color="red",
+            label="Right Wrist",
+        )
+        ax_punch.legend(loc="upper right")
 
-        cursor_line = ax_plot.axvline(0, color="k", linestyle="--")
+        cursor_line_punch_metrics = ax_punch.axvline(
+            0, color="k", linestyle="--"
+        )
+
+        # Plot rotation metrics
+        cursor_line_rotation_metrics = None
+        if (
+            boxing_metrics.hip_rotation_velocity_magnitude is not None
+            or boxing_metrics.shoulder_rotation_velocity_magnitude is not None
+        ):
+            if boxing_metrics.hip_rotation_velocity_magnitude is not None:
+                hip_vel = (
+                    boxing_metrics.hip_rotation_velocity_magnitude
+                )
+                ax_rotation.plot(
+                    range(num_frames),
+                    hip_vel,
+                    color="purple",
+                    label="hip",
+                )
+
+            if boxing_metrics.shoulder_rotation_velocity_magnitude is not None:
+                shoulder_vel = (
+                    boxing_metrics.shoulder_rotation_velocity_magnitude
+                )
+                ax_rotation.plot(
+                    range(num_frames),
+                    shoulder_vel,
+                    color="orange",
+                    label="shoulder",
+                )
+            ax_rotation.set(
+                xlabel="Frame Index",
+                ylabel="Rotation magnitude",
+            )
+            ax_rotation.grid(True)
+
+            ax_rotation.legend(loc="upper right")
+            cursor_line_rotation_metrics = (
+                ax_rotation.axvline(
+                    0, color="k", linestyle="--"
+                )
+            )
 
         # Display first video frame
-        frame_rgb = cv2.cvtColor(video_data.frames[0].frame, cv2.COLOR_BGR2RGB)
+        frame_rgb = cv2.cvtColor(
+            video_data.frames[0].frame, cv2.COLOR_BGR2RGB
+        )
         im = ax_video.imshow(frame_rgb)
         ax_video.axis("off")
 
         def update(frame_idx):
             # Update video frame
-            frame_rgb = cv2.cvtColor(video_data.frames[frame_idx].frame, cv2.COLOR_BGR2RGB)
+            frame_rgb = cv2.cvtColor(
+                video_data.frames[frame_idx].frame, cv2.COLOR_BGR2RGB
+            )
             im.set_data(frame_rgb)
             ax_video.set_title(f"Frame {frame_idx+1}/{num_frames}")
+            cursor_line_punch_metrics.set_xdata([frame_idx])
+            cursor_lines = [cursor_line_punch_metrics]
+            if cursor_line_rotation_metrics:
+                cursor_line_rotation_metrics.set_xdata([frame_idx])
+                cursor_lines.append(cursor_line_rotation_metrics)
 
-            # Move cursor line
-            cursor_line.set_xdata([frame_idx])
-
-            return im, cursor_line
+            return cursor_lines + [im]
 
         anim = FuncAnimation(
             fig,
@@ -73,13 +139,13 @@ class FuseVideoAndBoxingMetrics(
         )
 
         # Save the animation and its output path
-        output_path = define_output_path(video_path)
+        output_path = define_output_path(video_data.config.path)
         anim.save(output_path, writer="ffmpeg", fps=15)
-        plt.close(fig)
-
+        plt.show()
         return output_path
 
-def define_output_path(video_path: str) -> str:
+
+def define_output_path(video_path: Path) -> str:
 
     # --- Build output path ---
     output_dir = Path("output")
