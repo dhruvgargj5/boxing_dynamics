@@ -39,7 +39,9 @@ from mediapipe.tasks.python import BaseOptions
     default=None,
     help="Optional scale factor for resizing video frames (e.g. 0.5).",
 )
-def main(video_path: Path, debug_logging: bool, scale_factor: float):
+@click.option("--lite", "model_fidelity", flag_value="lite", default='lite', help="Use lite MediaPipe model (default).")
+@click.option("--heavy", "model_fidelity", flag_value="heavy", help="heavy model.")
+def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidelity):
     """Run the BoxingDynamics pipeline on a specified video path."""
     log_level = logging.DEBUG if debug_logging else logging.INFO
     logging.basicConfig(
@@ -59,13 +61,20 @@ def main(video_path: Path, debug_logging: bool, scale_factor: float):
 
     # --- Run pipeline stages ---
     video_data = VideoLoader().execute(video_config)
+    model_asset_path = None
+    match model_fidelity:
+        case 'heavy':
+            model_asset_path = "assets/pose_landmarker_heavy.task"
+        case _:
+            model_asset_path = "assets/pose_landmarker_lite.task"
+    
 
     landmarkers = ExtractHumanPoseLandmarks().execute(
         LandmarkingStageInput(
             video_data,
             PoseLandmarkerOptions(
                 base_options=BaseOptions(
-                    model_asset_path="assets/pose_landmarker_lite.task"
+                    model_asset_path=model_asset_path
                 ),
                 running_mode=mp.tasks.vision.RunningMode.VIDEO,
                 output_segmentation_masks=False,
@@ -82,7 +91,6 @@ def main(video_path: Path, debug_logging: bool, scale_factor: float):
     # Run fusion stage with explicit output path
     output_path = FuseVideoAndBoxingMetrics().execute(
         (video_data, boxing_metrics),
-        video_path
     )
     logging.info(f"Output video will be saved to: {output_path}")
     logging.info("Finished BoxingDynamics pipeline")
