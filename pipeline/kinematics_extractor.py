@@ -31,7 +31,7 @@ class ExtractWorldLandmarkLinearKinematics(
             input
         )
         velocities = np.gradient(positions, axis=0)
-        self.logger.info("Starting ExtractWorldLandmarkLinearKinematics stage")
+        self.logger.info("Finishing ExtractWorldLandmarkLinearKinematics stage")
         return WorldLandmarkLinearKinematicVariables(
             positions, velocity=velocities
         )
