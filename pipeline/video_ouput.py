@@ -139,7 +139,7 @@ class FuseVideoAndBoxingMetrics(
         )
 
         # Save the animation and its output path
-        output_path = define_output_path(video_data.config.path)
+        output_path = define_output_path(Path(video_data.config.name))
         anim.save(output_path, writer="ffmpeg", fps=15)
         plt.show()
         return output_path

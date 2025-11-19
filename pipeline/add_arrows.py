@@ -60,7 +60,7 @@ class AddArrowsToLegs(
         #             }
         
         """
-
+        
         video_data = input.video_data 
         landmark_results = input.landmarkers
         save_video = input.save_video
@@ -123,14 +123,13 @@ class AddArrowsToLegs(
                     y_px = int(lm.y * height)
                     pts[landmark_name] = (x_px, y_px)
         return pts
-    
             
     def save_video(self, video_data):
         """Helper: save VideoData frames to MP4."""
         height, width, _ = video_data.frames[0].frame.shape
         fps = 15  # or video_data.config.fps if available
 
-        video_path = video_data.config.path
+        video_path = Path(video_data.config.name)
         output_path = Path("output") / f"{video_path.stem}_with_arrows.mp4"
         output_path.parent.mkdir(exist_ok=True)
 

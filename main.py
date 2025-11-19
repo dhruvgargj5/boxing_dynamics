@@ -26,15 +26,10 @@ from mediapipe.tasks.python import BaseOptions
 # adding command line call options
 @click.command()
 @click.argument(
-    "video_path",
-    type=click.Path(exists=True, path_type=Path),
-)
-@click.option(
-    "--debug-logging",
-    is_flag=True,
-    help="Enable DEBUG logging",
-    default=False,
-)
+    "video_path", 
+    type=str)
+@click.option("--name", type=str, default=None,
+              help="Optional display name for the video (e.g., 'goodRightHook').")
 @click.option(
     "--scale-factor",
     type=float,
@@ -43,9 +38,16 @@ from mediapipe.tasks.python import BaseOptions
 )
 @click.option("--lite", "model_fidelity", flag_value="lite", default='lite', help="Use lite MediaPipe model (default).")
 @click.option("--heavy", "model_fidelity", flag_value="heavy", help="heavy model.")
+@click.option(
+    "--debug-logging",
+    is_flag=True,
+    help="Enable DEBUG logging",
+    default=False,
+)
+
 
 # main function : Running the pipeline
-def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidelity):
+def main(video_path: str, name: str, debug_logging: bool, scale_factor: float, model_fidelity):
     """Run the BoxingDynamics pipeline on a specified video path."""
     log_level = logging.DEBUG if debug_logging else logging.INFO
     logging.basicConfig(
@@ -58,8 +60,8 @@ def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidel
 
     # Stage 1️⃣: Load video
     video_config = VideoConfiguration(
-        name=video_path.stem,
-        path=video_path,
+        name=name,                  
+        path=Path(video_path),
         scale_factor=scale_factor,
     )
     video_data = VideoLoader().execute(video_config)
@@ -86,23 +88,29 @@ def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidel
     )
 
     # Stage3️⃣: Compute linear kinematics 
-    # linear_kinematics = ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
+    linear_kinematics = ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
     
-    # # Stage 4️⃣: Compute joint angular kinematics
-    # joint_angle_kinematics = ExtractJointAngularKinematics().execute(linear_kinematics)
+    # Stage 4️⃣: Compute joint angular kinematics
+    joint_angle_kinematics = ExtractJointAngularKinematics().execute(linear_kinematics)
     
-    # # Stage 5️⃣: Calculate Relevant Boxing Metrics
-    # boxing_metrics = CalculateBoxingMetrics().execute(linear_kinematics)
+    # Stage 5️⃣: Calculate Relevant Boxing Metrics
+    boxing_metrics = CalculateBoxingMetrics().execute(linear_kinematics)
 
     # Stage 6️⃣: Add (growning/shrinking) force arrows to the orginal video
     video_data_w_arrows, output_path = AddArrowsToLegs().execute(AddArrowsStageInput(
                                                                                     video_data, 
                                                                                     landmarkers, 
                                                                                     save_video=True))
+    
+    
 
     # Stage 7️⃣: Fuse the input video and boxing metrics into one output video
-    # output_path = FuseVideoAndBoxingMetrics().execute((video_with_arrows, boxing_metrics))
-    # logging.info(f"Output video will be saved to: {output_path}")
+    output_path = FuseVideoAndBoxingMetrics().execute((video_data, boxing_metrics))
+    
+    # uncomment the line below to have video with arrows on the left and boxing metric plots on the right
+    # output_path = FuseVideoAndBoxingMetrics().execute((video_data_w_arrows, boxing_metrics))
+
+    logging.info(f"Output video with boxing feedback is saved to: {output_path}")
     logging.info(f"Saving video with arrows to: {output_path}")
 
     logging.info("Finished BoxingDynamics pipeline")
