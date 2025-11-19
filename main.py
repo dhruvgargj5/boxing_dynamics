@@ -85,7 +85,7 @@ def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidel
         )
     )
 
-    # # Stage3️⃣: Compute linear kinematics 
+    # Stage3️⃣: Compute linear kinematics 
     # linear_kinematics = ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
     
     # # Stage 4️⃣: Compute joint angular kinematics
@@ -100,7 +100,7 @@ def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidel
                                                                                     landmarkers, 
                                                                                     save_video=True))
 
-    # # Stage 7️⃣: Fuse the input video and boxing metrics into one output video
+    # Stage 7️⃣: Fuse the input video and boxing metrics into one output video
     # output_path = FuseVideoAndBoxingMetrics().execute((video_with_arrows, boxing_metrics))
     # logging.info(f"Output video will be saved to: {output_path}")
     logging.info(f"Saving video with arrows to: {output_path}")

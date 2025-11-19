@@ -12,7 +12,7 @@ Output:
 import cv2
 import numpy as np
 from typing import Tuple, List
-from mediapipe.tasks.python.vision.pose_landmarker import PoseLandmarkerResult
+# from mediapipe.tasks.python.vision.pose_landmarker import PoseLandmarkerResult
 from pipeline.pipeline import StageBase, AddArrowsStageInput, VideoData
 from pathlib import Path
 
@@ -45,6 +45,21 @@ class AddArrowsToLegs(
         self.arrow_length = arrow_length
 
     def execute(self, input: AddArrowsStageInput ) -> VideoData:
+        
+        """        
+        # MP_POSES= { "left_hip": 23, 
+        #             "right_hip": 24,
+        #             "left knee" : 25,
+        #             "right_knee" : 26,
+        #             "left_ankle": 27, 
+        #             "right_ankle": 28,
+        #             "left_heel": 29, 
+        #             "right_heel" : 30,
+        #             "left_foot_index" : 31, 
+        #             "right_fot_index" : 32                 
+        #             }
+        
+        """
 
         video_data = input.video_data 
         landmark_results = input.landmarkers
@@ -55,24 +70,25 @@ class AddArrowsToLegs(
 
         for frame_idx, frame_data in enumerate(video_data.frames):
 
+            # copy the video frame
             frame = frame_data.frame.copy()
             
-            # Get ankle coordinates in pixels
-            pts = self._extract_ankles(landmark_results[frame_idx].pose_landmarks, width, height)
+            # get list of landmarks for this frame
+            frame_landmarks = landmark_results[frame_idx].pose_landmarks[0]
+            
+            # Get coordinates for landmarks of interest in pixels
+            landmarks_of_interest = {"left_hip" : 23, 
+                                     "right_hip" : 24, 
+                                     "left_knee": 25, 
+                                     "right_knee" : 26}
+            pts = self._extract_position_pts(landmarks_of_interest, frame_landmarks, width, height)
 
             # Draw one arrow per ankle (pointing slightly forward)
-            for name, point in pts.items():
-                if point is not None:
-                    pt_start = tuple(point)
-                    pt_end = (int(point[0] + self.arrow_length), int(point[1]))  # forward arrow
-                    cv2.arrowedLine(
-                        frame,
-                        pt_start,
-                        pt_end,
-                        self.color,
-                        self.thickness,
-                        tipLength=0.3,
-                    )
+            for name, pt in pts.items():
+                if pt is not None:
+                    pt_start = pt
+                    pt_end = (pt_start[0] + self.arrow_length, pt_start[1] + self.arrow_length // 2)
+                    cv2.arrowedLine(frame, pt_start, pt_end, self.color, self.thickness, tipLength=0.3)
 
             new_frame_data = type(frame_data)(
                 frame = frame, 
@@ -92,31 +108,30 @@ class AddArrowsToLegs(
         else:
             return video_data
 
-    def _extract_ankles(self, pose_landmarks, width: int, height: int):
-        """
-        Extract left/right ankle coordinates (in pixels) from pose landmarks.
-        """
-        print(type(pose_landmarks[0]))
-        print(pose_landmarks[0][0])
-        
-        MP_POSE = {"left_ankle": 27, "right_ankle": 28}
-        pts = {}
 
-        for name, idx in MP_POSE.items():
-            if idx < len(pose_landmarks):
-                lm = pose_landmarks[idx]
-                pts[name] = np.array([int(lm.x * width), int(lm.y * height)])
-            else:
-                pts[name] = None
+    def _extract_position_pts(self, landmarks_of_interest:list, frame_landmarks, width: int, height: int ):
+        """
+        Extract the coordinates (in pixels) for landmarks of interest from pose landmarks.
+        Expects pose_landmarks to be a list of NormalizedLandmark for a specific frame.
+        """
+        pts= {}
+        
+        for landmark_name, idx in landmarks_of_interest.items():
+                if idx < len(frame_landmarks):
+                    lm = frame_landmarks[idx]
+                    x_px = int(lm.x * width)
+                    y_px = int(lm.y * height)
+                    pts[landmark_name] = (x_px, y_px)
         return pts
     
+            
     def save_video(self, video_data):
         """Helper: save VideoData frames to MP4."""
         height, width, _ = video_data.frames[0].frame.shape
         fps = 15  # or video_data.config.fps if available
 
         video_path = video_data.config.path
-        output_path = Path("output") / f"{video_path.stem}_feet_arrows.mp4"
+        output_path = Path("output") / f"{video_path.stem}_with_arrows.mp4"
         output_path.parent.mkdir(exist_ok=True)
 
         writer = cv2.VideoWriter(
