@@ -60,8 +60,8 @@ class WorldLandmarkLinearKinematicVariables:
 class AngularKinematicVariables:
     # (Time/frame, joint, pos/vel/accel (1))
     position: np.ndarray
-    velocity: Optional[np.ndarray] = None
-    acceleration: Optional[np.ndarray] = None
+    velocity: np.ndarray
+    acceleration: np.ndarray
 
 
 @dataclass

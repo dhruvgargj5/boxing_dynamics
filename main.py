@@ -16,11 +16,19 @@ from pipeline.kinematics_extractor import (
 )
 from pipeline.boxing_metrics import CalculateBoxingMetrics
 from pipeline.video_ouput import FuseVideoAndBoxingMetrics
-
+from mediapipe.python.solutions.pose import PoseLandmark
 import mediapipe as mp
 from mediapipe.tasks.python.vision.pose_landmarker import PoseLandmarkerOptions
 from mediapipe.tasks.python import BaseOptions
 
+def kinematics_callback(ctx, param, value):
+    mapping = {
+        "left_knee": PoseLandmark.LEFT_KNEE,
+        "right_knee": PoseLandmark.RIGHT_KNEE,
+        "left_elbow" :PoseLandmark.LEFT_ELBOW,
+        "right_elbow" :PoseLandmark.RIGHT_ELBOW,
+    }
+    return mapping[value.lower()]
 
 @click.command()
 @click.argument(
@@ -41,7 +49,15 @@ from mediapipe.tasks.python import BaseOptions
 )
 @click.option("--lite", "model_fidelity", flag_value="lite", default='lite', help="Use lite MediaPipe model (default).")
 @click.option("--heavy", "model_fidelity", flag_value="heavy", help="heavy model.")
-def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidelity):
+@click.option(
+    "--kinematics",
+    type=click.Choice(["left_knee", "right_knee", "left_elbow", "right_elbow"], case_sensitive=False),
+    required=False,
+    default=None,
+    help="Which joint kinematics to plot.",
+    callback=lambda ctx, param, value: PoseLandmark[value.upper()]
+)
+def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidelity, kinematics):
     """Run the BoxingDynamics pipeline on a specified video path."""
     log_level = logging.DEBUG if debug_logging else logging.INFO
     logging.basicConfig(
@@ -83,16 +99,20 @@ def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidel
     )
 
     linear_kinematics = ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
-    joint_angle_kinematics = ExtractJointAngularKinematics().execute(linear_kinematics)
     boxing_metrics = CalculateBoxingMetrics().execute(linear_kinematics)
 
-    
+    video_fuser = FuseVideoAndBoxingMetrics()
 
-    # Run fusion stage with explicit output path
-    output_path = FuseVideoAndBoxingMetrics().execute(
-        (video_data, boxing_metrics),
+    if kinematics is not None:
+        logging.info(f"Outputting kinematics")
+        joint_angle_kinematics = ExtractJointAngularKinematics().execute(linear_kinematics)
+        video_fuser.PlotJointAngularKinematics((video_data, joint_angle_kinematics), kinematics)
+        return
+    
+    output_path = video_fuser.execute(
+        (video_data, boxing_metrics)
     )
-    logging.info(f"Output video will be saved to: {output_path}")
+    logging.info(f"Output video saved to: {output_path}")
     logging.info("Finished BoxingDynamics pipeline")
 
 
