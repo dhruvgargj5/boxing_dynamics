@@ -75,16 +75,6 @@ class FuseVideoAndBoxingMetrics(
             color="b",
         )
 
-        punch_frames_rear_hook = [90, 159, 233, 350, 422, 492, 617, 675, 742]
-        punch_frames_uppercut = [28, 100, 172, 309, 371, 434, 630, 687]
-        window=3
-        key_frames = punch_frames_rear_hook
-        if 'uppercut' in video_data.config.name:
-            key_frames = punch_frames_uppercut
-        for f in key_frames:
-            for ax in [ax_pos, ax_vel, ax_accel]:
-                ax.axvspan(f - window, f + window, color="y", alpha=0.2)      
-
         cursor_line_pos = ax_pos.axvline(0, color="k", linestyle="--")
         cursor_line_vel = ax_vel.axvline(0, color="k", linestyle="--")
         cursor_line_accel = ax_accel.axvline(
@@ -141,12 +131,12 @@ class FuseVideoAndBoxingMetrics(
 
         # Figure with two rows: top for video, bottom for metrics
         fig = plt.figure(figsize=(14, 6))
-        gs = gridspec.GridSpec(2, 2, figure=fig, width_ratios=[1, 3])
+        gs = gridspec.GridSpec(2, 3, figure=fig, width_ratios=[1, 3,2])
 
         ax_video = fig.add_subplot(gs[:, 0])
-
         ax_punch = fig.add_subplot(gs[0, 1])
         ax_rotation = fig.add_subplot(gs[1, 1])
+        ax_com = fig.add_subplot(gs[:2, 2])
 
         ax_rotation.sharex(ax_punch)
 
@@ -187,47 +177,52 @@ class FuseVideoAndBoxingMetrics(
         # Plot rotation metrics
         cursor_line_rotation_metrics = None
         if (
-            boxing_metrics.hip_rotation_velocity_magnitude is not None
-            or boxing_metrics.shoulder_rotation_velocity_magnitude
+            boxing_metrics.hip_rotation_velocity_magnitude
             is not None
         ):
-            if (
+            hip_vel = (
                 boxing_metrics.hip_rotation_velocity_magnitude
-                is not None
-            ):
-                hip_vel = (
-                    boxing_metrics.hip_rotation_velocity_magnitude
-                )
-                ax_rotation.plot(
-                    range(num_frames),
-                    hip_vel,
-                    color="purple",
-                    label="hip",
-                )
+            )
+            ax_rotation.plot(
+                range(num_frames),
+                hip_vel,
+                color="purple",
+                label="hip",
+            )        
 
-            if (
+        if (
+            boxing_metrics.shoulder_rotation_velocity_magnitude
+            is not None
+        ):
+            shoulder_vel = (
                 boxing_metrics.shoulder_rotation_velocity_magnitude
-                is not None
-            ):
-                shoulder_vel = (
-                    boxing_metrics.shoulder_rotation_velocity_magnitude
-                )
-                ax_rotation.plot(
-                    range(num_frames),
-                    shoulder_vel,
-                    color="orange",
-                    label="shoulder",
-                )
-            ax_rotation.set(
-                xlabel="Frame Index",
-                ylabel="Rotation magnitude",
             )
-            ax_rotation.grid(True)
+            ax_rotation.plot(
+                range(num_frames),
+                shoulder_vel,
+                color="orange",
+                label="shoulder",
+            )
 
-            ax_rotation.legend(loc="upper right")
-            cursor_line_rotation_metrics = ax_rotation.axvline(
-                0, color="k", linestyle="--"
-            )
+        ax_rotation.set(
+            xlabel="Frame Index",
+            ylabel="Rotation magnitude",
+        )
+        ax_rotation.grid(True)
+
+        ax_rotation.legend(loc="upper right")
+        cursor_line_rotation_metrics = ax_rotation.axvline(
+            0, color="k", linestyle="--"
+        )
+
+        ax_com.set_xlabel('X')
+        ax_com.set_ylabel('Z')
+        ax_com.set_title('COM XZ trajectory')
+        ax_com.grid(True)
+        ax_com.axis('equal')
+        ax_com.plot(boxing_metrics.center_of_mass[:, 0], boxing_metrics.center_of_mass[:,2], 'bo', alpha=0.2)
+        com_marker, = ax_com.plot([], [], 'g*', animated=True, ms=50, mec='black')
+        com_marker.set_data([], [])        
 
         # Display first video frame
         frame_rgb = cv2.cvtColor(
@@ -243,13 +238,14 @@ class FuseVideoAndBoxingMetrics(
             )
             im.set_data(frame_rgb)
             ax_video.set_title(f"Frame {frame_idx+1}/{num_frames}")
+            com_marker.set_data([boxing_metrics.center_of_mass[frame_idx, 0]], [boxing_metrics.center_of_mass[frame_idx, 2]])
             cursor_line_punch_metrics.set_xdata([frame_idx])
             cursor_lines = [cursor_line_punch_metrics]
             if cursor_line_rotation_metrics:
                 cursor_line_rotation_metrics.set_xdata([frame_idx])
                 cursor_lines.append(cursor_line_rotation_metrics)
-
-            return cursor_lines + [im]
+        
+            return cursor_lines + [im, com_marker] 
 
         anim = FuncAnimation(
             fig,
@@ -262,7 +258,6 @@ class FuseVideoAndBoxingMetrics(
         # Save the animation and its output path
         output_path = define_output_path(video_data.config.path)
         anim.save(output_path, writer="ffmpeg", fps=15)
-        plt.show()
         return output_path
 
 

@@ -21,15 +21,6 @@ import mediapipe as mp
 from mediapipe.tasks.python.vision.pose_landmarker import PoseLandmarkerOptions
 from mediapipe.tasks.python import BaseOptions
 
-def kinematics_callback(ctx, param, value):
-    mapping = {
-        "left_knee": PoseLandmark.LEFT_KNEE,
-        "right_knee": PoseLandmark.RIGHT_KNEE,
-        "left_elbow" :PoseLandmark.LEFT_ELBOW,
-        "right_elbow" :PoseLandmark.RIGHT_ELBOW,
-    }
-    return mapping[value.lower()]
-
 @click.command()
 @click.argument(
     "video_path",
@@ -55,7 +46,6 @@ def kinematics_callback(ctx, param, value):
     required=False,
     default=None,
     help="Which joint kinematics to plot.",
-    callback=lambda ctx, param, value: PoseLandmark[value.upper()]
 )
 def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidelity, kinematics):
     """Run the BoxingDynamics pipeline on a specified video path."""
@@ -103,10 +93,11 @@ def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidel
 
     video_fuser = FuseVideoAndBoxingMetrics()
 
-    if kinematics is not None:
+    if kinematics:
+        joint = PoseLandmark[kinematics.upper()]
         logging.info(f"Outputting kinematics")
         joint_angle_kinematics = ExtractJointAngularKinematics().execute(linear_kinematics)
-        video_fuser.PlotJointAngularKinematics((video_data, joint_angle_kinematics), kinematics)
+        video_fuser.PlotJointAngularKinematics((video_data, joint_angle_kinematics), joint)
         return
     
     output_path = video_fuser.execute(
