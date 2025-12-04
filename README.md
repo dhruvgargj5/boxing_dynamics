@@ -92,14 +92,14 @@ python3 -m pdb -c continue main.py  <path2Video/link2Video>
 # Pipeline
 The pipeline consist of 6 stages total. 
 1. Video Loader 
-- loads the video from a path and stores the video settings (name, fps, and scale factor)
+    > loads the video from a path and stores the video settings (name, fps, and scale factor)
 2. Landmark Extraction 
-- uses the mediapipe pose detection software to track the 33 keypoints throughout the video and store their positions and visibilities. 
+    > uses the mediapipe pose detection software to track the 33 keypoints throughout the video and store their positions and visibilities. 
 3. Kinematics Computations 
-- computes the kinematics of relevant keypoints (left and right wrist) as well as the Joint Angular Kinematics of joints of interest using the world coordinates generated from landmark extraction 
+    > computes the kinematics of relevant keypoints (left and right wrist) as well as the Joint Angular Kinematics of joints of interest using the world coordinates generated from landmark extraction 
 4. Compute Boxing Metrics 
-- determines the wrist velocity and shoulder and hip rotations from the computed kinematics in the previous stage
+    > determines the wrist velocity and shoulder and hip rotations from the computed kinematics in the previous stage
 5. Adding Force Arrows 
-- (optional stage) Adds FBD to the video which shows where the force in the punch is being generated 
+    > (optional stage) Adds FBD to the video which shows where the force in the punch is being generated 
 6. Fusion of Boxing Metrics to Video
-- outputs the input video with additional graphs to the right of it which track the boxing metrics and the estimated kniematics from pose detection
+    > outputs the input video with additional graphs to the right of it which track the boxing metrics and the estimated kniematics from pose detection
