@@ -1,3 +1,12 @@
+---
+title: My Video Processor
+emoji: 🎬
+colorFrom: blue
+colorTo: blue
+sdk: gradio
+pinned: false
+---
+
 # Boxing Dynamics
 
 Boxing Dynamics is a Python pipeline for analyzing the kinematics of a person boxing. The input to the pipeline is videos of person throwing a variety of punches. The pipieline will automatically analyze the video using Google's Pose Landmark Detection software mediapipe and detect the motion of 33 keypoints trhought the video. The keypoints are defined as follows: 

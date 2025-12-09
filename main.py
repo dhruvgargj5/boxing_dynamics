@@ -23,32 +23,42 @@ import mediapipe as mp
 from mediapipe.tasks.python.vision.pose_landmarker import PoseLandmarkerOptions
 from mediapipe.tasks.python import BaseOptions
 
-# adding command line call options
-@click.command()
-@click.argument(
-    "video_path", 
-    type=str)
-@click.option("--name", type=str, default=None,
-              help="Optional display name for the video (e.g., 'goodRightHook').")
-@click.option(
-    "--scale-factor",
-    type=float,
-    default=None,
-    help="Optional scale factor for resizing video frames (e.g. 0.5).",
-)
-@click.option("--lite", "model_fidelity", flag_value="lite", default='lite', help="Use lite MediaPipe model (default).")
-@click.option("--heavy", "model_fidelity", flag_value="heavy", help="heavy model.")
-@click.option(
-    "--debug-logging",
-    is_flag=True,
-    help="Enable DEBUG logging",
-    default=False,
-)
+# ---------------------------------------------------------------------
+# WRAPPER FUNCTION: For Hugging Face / Gradio / API use
+# ---------------------------------------------------------------------
+def process_video(
+    video_path: str,
+    name: str = None,
+    scale_factor: float = None,
+    model_fidelity: str = "lite",
+    debug_logging: bool = False,
+) -> str:
+    """
+    Process a video using the BoxingDynamics pipeline and return
+    the *output video file path*.
+
+    This wraps the CLI main() so HF Spaces or Gradio can call it directly.
+    """
+    return _run_pipeline(
+        video_path=video_path,
+        name=name,
+        scale_factor=scale_factor,
+        model_fidelity=model_fidelity,
+        debug_logging=debug_logging,
+    )
 
 
-# main function : Running the pipeline
-def main(video_path: str, name: str, debug_logging: bool, scale_factor: float, model_fidelity):
-    """Run the BoxingDynamics pipeline on a specified video path."""
+# ---------------------------------------------------------------------
+# INTERNAL PIPELINE FUNCTION (shared by process_video and CLI)
+# ---------------------------------------------------------------------
+def _run_pipeline(
+    video_path: str,
+    name: str,
+    scale_factor: float,
+    model_fidelity: str,
+    debug_logging: bool,
+) -> str:
+
     log_level = logging.DEBUG if debug_logging else logging.INFO
     logging.basicConfig(
         level=log_level,
@@ -58,22 +68,21 @@ def main(video_path: str, name: str, debug_logging: bool, scale_factor: float, m
     logging.info("Starting BoxingDynamics pipeline")
     logging.info(f"Video Path: {video_path}")
 
-    # Stage 1️⃣: Load video
+    # Stage 1: Load video
     video_config = VideoConfiguration(
-        name=name,                  
+        name=name,
         path=Path(video_path),
         scale_factor=scale_factor,
     )
     video_data = VideoLoader().execute(video_config)
-    
-    # Stage 2️⃣:  Select model (lite/heavy) and extract landmarks
-    model_asset_path = None
+
+    # Stage 2: Select model and extract landmarks
     match model_fidelity:
-        case 'heavy':
+        case "heavy":
             model_asset_path = "assets/pose_landmarker_heavy.task"
         case _:
             model_asset_path = "assets/pose_landmarker_lite.task"
-    
+
     landmarkers = ExtractHumanPoseLandmarks().execute(
         LandmarkingStageInput(
             video_data,
@@ -87,33 +96,60 @@ def main(video_path: str, name: str, debug_logging: bool, scale_factor: float, m
         )
     )
 
-    # Stage3️⃣: Compute linear kinematics 
-    linear_kinematics = ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
-    
-    # Stage 4️⃣: Compute joint angular kinematics
-    joint_angle_kinematics = ExtractJointAngularKinematics().execute(linear_kinematics)
-    
-    # Stage 5️⃣: Calculate Relevant Boxing Metrics
+    # Stage 3: Linear kinematics
+    linear_kinematics = (
+        ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
+    )
+
+    # Stage 4: Joint angles
+    joint_angle_kinematics = ExtractJointAngularKinematics().execute(
+        linear_kinematics
+    )
+
+    # Stage 5: Boxing metrics
     boxing_metrics = CalculateBoxingMetrics().execute(linear_kinematics)
 
-    # Stage 6️⃣: Add (growning/shrinking) force arrows to the orginal video
-    video_data_w_arrows, output_path = AddArrowsToLegs().execute(AddArrowsStageInput(
-                                                                                    video_data, 
-                                                                                    landmarkers, 
-                                                                                    save_video=True))
-    
-    
+    # Stage 6: Fuse video & metrics into output
+    output_path = FuseVideoAndBoxingMetrics().execute(
+        (video_data, boxing_metrics)
+    )
 
-    # Stage 7️⃣: Fuse the input video and boxing metrics into one output video
-    output_path = FuseVideoAndBoxingMetrics().execute((video_data, boxing_metrics))
-    
-    # uncomment the line below to have video with arrows on the left and boxing metric plots on the right
-    # output_path = FuseVideoAndBoxingMetrics().execute((video_data_w_arrows, boxing_metrics))
-
-    logging.info(f"Output video with boxing feedback is saved to: {output_path}")
-    logging.info(f"Saving video with arrows to: {output_path}")
-
+    logging.info(f"Output video is saved to: {output_path}")
     logging.info("Finished BoxingDynamics pipeline")
+
+    return str(output_path)
+
+
+# ---------------------------------------------------------------------
+# ORIGINAL CLICK-BASED CLI ENTRY POINT
+# ---------------------------------------------------------------------
+@click.command()
+@click.argument("video_path", type=str)
+@click.option(
+    "--name",
+    type=str,
+    default=None,
+    help="Optional display name for the video (e.g., 'goodRightHook').",
+)
+@click.option(
+    "--scale-factor",
+    type=float,
+    default=None,
+    help="Optional scale factor for resizing video frames (e.g. 0.5).",
+)
+@click.option("--lite", "model_fidelity", flag_value="lite", default="lite")
+@click.option("--heavy", "model_fidelity", flag_value="heavy")
+@click.option("--debug-logging", is_flag=True, default=False)
+def main(video_path, name, debug_logging, scale_factor, model_fidelity):
+    """CLI wrapper: python main.py file.mp4"""
+    process_video(
+        video_path,
+        name=name,
+        scale_factor=scale_factor,
+        model_fidelity=model_fidelity,
+        debug_logging=debug_logging,
+    )
+
 
 if __name__ == "__main__":
     main()

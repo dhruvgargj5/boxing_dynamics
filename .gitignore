@@ -15,3 +15,4 @@ media/
 # video files
 *.mp4
 *.gif
+output/
