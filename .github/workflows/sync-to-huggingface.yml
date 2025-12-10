@@ -19,4 +19,4 @@ jobs:
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push https://adware74:$HF_TOKEN@huggingface.co/spaces/adware74/boxing-dynamics-app main
+        run: git push --force https://adware74:$HF_TOKEN@huggingface.co/spaces/adware74/boxing-dynamics-app main
