@@ -2,7 +2,6 @@ name: Sync to Hugging Face hub
 on:
   push:
     branches: 
-    - huggingface-deploy
     - main
 
   # to run this workflow manually from the Actions tab
