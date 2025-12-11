@@ -165,7 +165,8 @@ def main(
                 )
             )
             kinematics_anim = video_fuser.PlotJointAngularKinematics(
-                (video_data, joint_angle_kinematics), joint
+                (video_data, joint_angle_kinematics, landmarkers),
+                joint,
             )
             kinematics_out_path = (
                 output_dir / f"{joint.name}_angular_kinematics.MP4"

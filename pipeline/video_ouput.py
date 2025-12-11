@@ -14,8 +14,12 @@ from pipeline.pipeline import (
     WorldLandmarkLinearKinematicVariables,
 )
 from utils.joints import JOINTS, Joint
-from typing import Tuple
+from utils.videoProcessingFunctions import draw_landmarks_on_image
+from typing import Tuple, List
 from pathlib import Path
+from mediapipe.tasks.python.vision.pose_landmarker import (
+    PoseLandmarkerResult,
+)
 
 
 class FuseVideoAndBoxingMetrics(
@@ -36,10 +40,14 @@ class FuseVideoAndBoxingMetrics(
 
     def PlotJointAngularKinematics(
         self,
-        input: Tuple[VideoData, JointAngularKinematicVariables],
+        input: Tuple[
+            VideoData,
+            JointAngularKinematicVariables,
+            List[PoseLandmarkerResult],
+        ],
         joint: PoseLandmark,
     ):
-        video_data, kinematics = input
+        video_data, kinematics, landmarkers = input
         pos = kinematics.joint_3d_angular_kinematics.position
         vel = kinematics.joint_3d_angular_kinematics.velocity
         accel = kinematics.joint_3d_angular_kinematics.acceleration
@@ -97,7 +105,10 @@ class FuseVideoAndBoxingMetrics(
         frame_rgb = cv2.cvtColor(
             video_data.frames[0].frame, cv2.COLOR_BGR2RGB
         )
-        im = ax_video.imshow(frame_rgb)
+        annotated_frame = draw_landmarks_on_image(
+            frame_rgb, landmarkers[0]
+        )
+        im = ax_video.imshow(annotated_frame)
         ax_video.axis("off")
 
         def update(frame_idx):
@@ -105,7 +116,10 @@ class FuseVideoAndBoxingMetrics(
             frame_rgb = cv2.cvtColor(
                 video_data.frames[frame_idx].frame, cv2.COLOR_BGR2RGB
             )
-            im.set_data(frame_rgb)
+            annotated_frame = draw_landmarks_on_image(
+                frame_rgb, landmarkers[frame_idx]
+            )
+            im.set_data(annotated_frame)
             ax_video.set_title(f"Frame {frame_idx+1}/{num_frames}")
             cursor_line_pos.set_xdata([frame_idx])
             cursor_line_vel.set_xdata([frame_idx])
