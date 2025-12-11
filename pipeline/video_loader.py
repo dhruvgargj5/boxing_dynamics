@@ -13,7 +13,6 @@ class VideoLoader(StageBase[VideoConfiguration, VideoData]):
     def execute(self, input: VideoConfiguration) -> VideoData:
         self.logger.info("Starting VideoLoader stage")
         cap = cv2.VideoCapture(str(input.path))
-        fps = cap.get(cv2.CAP_PROP_FPS)
 
         frames = []
         msg = "Loading frames from video"
@@ -47,4 +46,8 @@ class VideoLoader(StageBase[VideoConfiguration, VideoData]):
         )
         self.logger.info("Finished VideoLoader stage")
 
-        return VideoData(frames=frames, fps=fps, config=input)
+        return VideoData(
+            frames=frames,
+            fps=int(cap.get(cv2.CAP_PROP_FPS)),
+            config=input,
+        )

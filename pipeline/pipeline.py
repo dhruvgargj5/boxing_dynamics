@@ -39,7 +39,7 @@ class Frame(NamedTuple):
 @dataclass
 class VideoData:
     frames: List[Frame]
-    fps: float
+    fps: int
     config: VideoConfiguration
 
 
