@@ -83,5 +83,7 @@ class BoxingPunchMetrics:
     right_wrist_punching_velocity_magnitude: np.ndarray
     left_wrist_punching_velocity_magnitude: np.ndarray
     center_of_mass:  np.ndarray
+    shoulder_position: np.ndarray # (T, 3, L/R)
+    hip_position: np.ndarray
     hip_rotation_velocity_magnitude: Optional[np.ndarray] = None
     shoulder_rotation_velocity_magnitude: Optional[np.ndarray] = None

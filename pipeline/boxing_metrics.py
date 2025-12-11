@@ -36,6 +36,12 @@ class CalculateBoxingMetrics(
                     input.velocity[:, PoseLandmark.LEFT_WRIST],
                     axis=1,
                 ),
+                shoulder_position=self.get_shoulder_joints_over_time(
+                    input.position
+                ),
+                hip_position=self.get_hip_joints_over_time(
+                    input.position
+                ),
                 hip_rotation_velocity_magnitude=self.calculate_hip_rotation(
                     input
                 ),
@@ -46,7 +52,25 @@ class CalculateBoxingMetrics(
             )
         else:
             raise NotImplementedError
-    
+
+    def get_shoulder_joints_over_time(self, position: np.ndarray):
+        return np.stack(
+            [
+                position[:, PoseLandmark.LEFT_SHOULDER],
+                position[:, PoseLandmark.RIGHT_SHOULDER],
+            ],
+            axis=-1,
+        )
+
+    def get_hip_joints_over_time(self, position: np.ndarray):
+        return np.stack(
+            [
+                position[:, PoseLandmark.LEFT_HIP],
+                position[:, PoseLandmark.RIGHT_HIP],
+            ],
+            axis=-1,
+        )
+
     def calculate_com(self, position: np.ndarray):
         # https://biomechanist.net/center-of-mass/
         mass = {
