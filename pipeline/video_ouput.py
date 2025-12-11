@@ -20,7 +20,7 @@ from pathlib import Path
 class FuseVideoAndBoxingMetrics(
     StageBase[
         Tuple[VideoData, BoxingPunchMetrics],
-        str,
+        FuncAnimation
     ]
 ):
     def PlotJointAngularKinematics(
@@ -125,7 +125,7 @@ class FuseVideoAndBoxingMetrics(
     def execute(
         self,
         input: Tuple[VideoData, BoxingPunchMetrics],
-    ) -> str:
+    ) -> FuncAnimation:
 
         video_data, boxing_metrics = input
 
@@ -251,22 +251,7 @@ class FuseVideoAndBoxingMetrics(
             fig,
             update,
             frames=num_frames,
-            interval=1000 / 15,  # ~15 FPS
+            interval=int(1e3 / video_data.fps),
             blit=True,
         )
-
-        # Save the animation and its output path
-        output_path = define_output_path(video_data.config.path)
-        anim.save(output_path, writer="ffmpeg", fps=15)
-        return output_path
-
-
-def define_output_path(video_path: Path) -> str:
-
-    # --- Build output path ---
-    output_dir = Path("output")
-    output_dir.mkdir(exist_ok=True)
-    output_filename = f"{video_path.stem}_with_metrics.mp4"
-    output_path = output_dir / output_filename
-
-    return str(output_path)
+        return anim

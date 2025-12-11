@@ -26,6 +26,10 @@ from mediapipe.tasks.python import BaseOptions
     "video_path",
     type=click.Path(exists=True, path_type=Path),
 )
+@click.argument(
+    "output_path",
+    type=click.Path(exists=False, path_type=Path),
+)
 @click.option(
     "--debug-logging",
     is_flag=True,
@@ -47,7 +51,7 @@ from mediapipe.tasks.python import BaseOptions
     default=None,
     help="Which joint kinematics to plot.",
 )
-def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidelity, kinematics):
+def main(video_path: Path, output_path: Path, debug_logging: bool, scale_factor: float, model_fidelity, kinematics):
     """Run the BoxingDynamics pipeline on a specified video path."""
     log_level = logging.DEBUG if debug_logging else logging.INFO
     logging.basicConfig(
@@ -100,9 +104,10 @@ def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidel
         video_fuser.PlotJointAngularKinematics((video_data, joint_angle_kinematics), joint)
         return
     
-    output_path = video_fuser.execute(
+    animation = video_fuser.execute(
         (video_data, boxing_metrics)
     )
+    animation.save(output_path, writer='ffmpeg', fps=video_data.fps)
     logging.info(f"Output video saved to: {output_path}")
     logging.info("Finished BoxingDynamics pipeline")
 
