@@ -39,6 +39,7 @@ class VideoLoader(StageBase[VideoConfiguration, VideoData]):
             frames.append(
                 Frame(frame, int(cap.get(cv2.CAP_PROP_POS_MSEC)))
             )
+        _fps = int(cap.get(cv2.CAP_PROP_FPS))
         cap.release()
 
         self.logger.info(
@@ -48,6 +49,6 @@ class VideoLoader(StageBase[VideoConfiguration, VideoData]):
 
         return VideoData(
             frames=frames,
-            fps=int(cap.get(cv2.CAP_PROP_FPS)),
+            fps=_fps,
             config=input,
         )
