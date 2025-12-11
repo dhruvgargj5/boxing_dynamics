@@ -52,8 +52,8 @@ class LandmarkingStageInput(NamedTuple):
 class WorldLandmarkLinearKinematicVariables:
     # (Time/frame, landmark, linear pos/vel/accel (3))
     position: np.ndarray
-    velocity: Optional[np.ndarray] = None
-    acceleration: Optional[np.ndarray] = None
+    velocity: np.ndarray
+    acceleration: np.ndarray
 
 
 @dataclass

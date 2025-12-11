@@ -18,8 +18,11 @@ from pipeline.boxing_metrics import CalculateBoxingMetrics
 from pipeline.video_ouput import FuseVideoAndBoxingMetrics
 from mediapipe.python.solutions.pose import PoseLandmark
 import mediapipe as mp
-from mediapipe.tasks.python.vision.pose_landmarker import PoseLandmarkerOptions
+from mediapipe.tasks.python.vision.pose_landmarker import (
+    PoseLandmarkerOptions,
+)
 from mediapipe.tasks.python import BaseOptions
+
 
 @click.command()
 @click.argument(
@@ -27,8 +30,14 @@ from mediapipe.tasks.python import BaseOptions
     type=click.Path(exists=True, path_type=Path),
 )
 @click.argument(
-    "output_path",
-    type=click.Path(exists=False, path_type=Path),
+    "output_dir",
+    type=click.Path(path_type=Path, dir_okay=True, file_okay=False),
+)
+@click.option(
+    "--no-metrics",
+    is_flag=True,
+    default=False,
+    help="Do not save metrics, otherwise metrics are saved by default",
 )
 @click.option(
     "--debug-logging",
@@ -42,16 +51,52 @@ from mediapipe.tasks.python import BaseOptions
     default=None,
     help="Optional scale factor for resizing video frames (e.g. 0.5).",
 )
-@click.option("--lite", "model_fidelity", flag_value="lite", default='lite', help="Use lite MediaPipe model (default).")
-@click.option("--heavy", "model_fidelity", flag_value="heavy", help="heavy model.")
 @click.option(
-    "--kinematics",
-    type=click.Choice(["left_knee", "right_knee", "left_elbow", "right_elbow"], case_sensitive=False),
+    "--lite",
+    "model_fidelity",
+    flag_value="lite",
+    default="lite",
+    help="Use lite MediaPipe model (default).",
+)
+@click.option(
+    "--heavy",
+    "model_fidelity",
+    flag_value="heavy",
+    help="heavy model.",
+)
+@click.option(
+    "--angular-kinematics",
+    "angular_kinematics_joints",
+    type=click.Choice(
+        ["left_knee", "right_knee", "left_elbow", "right_elbow"],
+        case_sensitive=False,
+    ),
     required=False,
     default=None,
-    help="Which joint kinematics to plot.",
+    multiple=True,
+    help="Which joint angular kinematics to plot.",
 )
-def main(video_path: Path, output_path: Path, debug_logging: bool, scale_factor: float, model_fidelity, kinematics):
+@click.option(
+    "--linear-kinematics",
+    "linear_kinematics_joints",
+    type=click.Choice(
+        [lm.name.lower() for lm in PoseLandmark], case_sensitive=False
+    ),
+    required=False,
+    default=None,
+    multiple=True,
+    help="Which joint angular kinematics to plot.",
+)
+def main(
+    video_path: Path,
+    output_dir: Path,
+    no_metrics: bool,
+    debug_logging: bool,
+    scale_factor: float,
+    model_fidelity,
+    angular_kinematics_joints,
+    linear_kinematics_joints,
+):
     """Run the BoxingDynamics pipeline on a specified video path."""
     log_level = logging.DEBUG if debug_logging else logging.INFO
     logging.basicConfig(
@@ -61,6 +106,9 @@ def main(video_path: Path, output_path: Path, debug_logging: bool, scale_factor:
 
     logging.info("Starting BoxingDynamics pipeline")
     logging.info(f"Video Path: {video_path}")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    logging.info(f"Made output directory {output_dir}")
 
     # Build video configuration dynamically
     video_config = VideoConfiguration(
@@ -73,11 +121,10 @@ def main(video_path: Path, output_path: Path, debug_logging: bool, scale_factor:
     video_data = VideoLoader().execute(video_config)
     model_asset_path = None
     match model_fidelity:
-        case 'heavy':
+        case "heavy":
             model_asset_path = "assets/pose_landmarker_heavy.task"
         case _:
             model_asset_path = "assets/pose_landmarker_lite.task"
-    
 
     landmarkers = ExtractHumanPoseLandmarks().execute(
         LandmarkingStageInput(
@@ -92,23 +139,52 @@ def main(video_path: Path, output_path: Path, debug_logging: bool, scale_factor:
         )
     )
 
-    linear_kinematics = ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
-    boxing_metrics = CalculateBoxingMetrics().execute(linear_kinematics)
+    linear_kinematics = (
+        ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
+    )
+    boxing_metrics = CalculateBoxingMetrics().execute(
+        linear_kinematics
+    )
 
     video_fuser = FuseVideoAndBoxingMetrics()
-
-    if kinematics:
-        joint = PoseLandmark[kinematics.upper()]
-        logging.info(f"Outputting kinematics")
-        joint_angle_kinematics = ExtractJointAngularKinematics().execute(linear_kinematics)
-        video_fuser.PlotJointAngularKinematics((video_data, joint_angle_kinematics), joint)
-        return
-    
-    animation = video_fuser.execute(
-        (video_data, boxing_metrics)
-    )
-    animation.save(output_path, writer='ffmpeg', fps=video_data.fps)
-    logging.info(f"Output video saved to: {output_path}")
+    if linear_kinematics_joints:
+        for joint_name in linear_kinematics_joints:
+            joint = PoseLandmark[joint_name.upper()]
+            logging.info(
+                f"Outputting linear kinematics for {joint.name}"
+            )
+    if angular_kinematics_joints:
+        for joint_name in angular_kinematics_joints:
+            joint = PoseLandmark[joint_name.upper()]
+            logging.info(
+                f"Outputting angular kinematics for {joint.name}"
+            )
+            joint_angle_kinematics = (
+                ExtractJointAngularKinematics().execute(
+                    linear_kinematics
+                )
+            )
+            kinematics_anim = video_fuser.PlotJointAngularKinematics(
+                (video_data, joint_angle_kinematics), joint
+            )
+            kinematics_out_path = (
+                output_dir / f"{joint.name}_angular_kinematics.MP4"
+            )
+            kinematics_anim.save(
+                kinematics_out_path,
+                writer="ffmpeg",
+                fps=video_data.fps,
+            )
+            logging.info(
+                f"Kinematics video saved to: {kinematics_out_path}"
+            )
+    if not no_metrics:
+        animation = video_fuser.execute((video_data, boxing_metrics))
+        metrics_out_path = output_dir / "metrics.MP4"
+        animation.save(
+            metrics_out_path, writer="ffmpeg", fps=video_data.fps
+        )
+        logging.info(f"Metrics video saved to: {metrics_out_path}")
     logging.info("Finished BoxingDynamics pipeline")
 
 

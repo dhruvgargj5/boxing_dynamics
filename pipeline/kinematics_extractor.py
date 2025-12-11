@@ -31,9 +31,10 @@ class ExtractWorldLandmarkLinearKinematics(
             input
         )
         velocities = np.gradient(positions, axis=0)
+        accelerations = np.gradient(velocities, axis=0)
         self.logger.info("Finishing ExtractWorldLandmarkLinearKinematics stage")
         return WorldLandmarkLinearKinematicVariables(
-            positions, velocity=velocities
+            positions, velocity=velocities, acceleration=accelerations
         )
 
 
@@ -53,7 +54,7 @@ class ExtractJointAngularKinematics(
             PoseLandmark.LEFT_KNEE,
             PoseLandmark.RIGHT_KNEE,
         ]
-        self.logger.info(f"Desired joints: {desired_joints}")
+        self.logger.info(f"Desired joints for angular kinematics: {desired_joints}")
         joint_3d_angles = np.zeros(
             (input.position.shape[0], len(desired_joints))
         )

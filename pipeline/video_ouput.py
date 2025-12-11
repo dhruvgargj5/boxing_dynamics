@@ -11,6 +11,7 @@ from pipeline.pipeline import (
     VideoData,
     BoxingPunchMetrics,
     JointAngularKinematicVariables,
+    WorldLandmarkLinearKinematicVariables,
 )
 from utils.joints import JOINTS, Joint
 from typing import Tuple
@@ -18,20 +19,32 @@ from pathlib import Path
 
 
 class FuseVideoAndBoxingMetrics(
-    StageBase[
-        Tuple[VideoData, BoxingPunchMetrics],
-        FuncAnimation
-    ]
+    StageBase[Tuple[VideoData, BoxingPunchMetrics], FuncAnimation]
 ):
+    def PlotJointLinearKinematics(
+        self,
+        input: Tuple[
+            VideoData, WorldLandmarkLinearKinematicVariables
+        ],
+        joint: PoseLandmark,
+    ):
+        video_data, kinematics = input
+        pos = kinematics.position[:, joint]
+        vel = kinematics.velocity[:, joint]
+        accel = kinematics.acceleration[:, joint]
+        return
+
     def PlotJointAngularKinematics(
-        self, input: Tuple[VideoData, JointAngularKinematicVariables], joint: PoseLandmark
+        self,
+        input: Tuple[VideoData, JointAngularKinematicVariables],
+        joint: PoseLandmark,
     ):
         video_data, kinematics = input
         pos = kinematics.joint_3d_angular_kinematics.position
         vel = kinematics.joint_3d_angular_kinematics.velocity
         accel = kinematics.joint_3d_angular_kinematics.acceleration
 
-        fig = plt.figure(figsize=(14, 6), layout='tight')
+        fig = plt.figure(figsize=(14, 6), layout="tight")
         gs = gridspec.GridSpec(3, 2, figure=fig, width_ratios=[1, 3])
         ax_video = fig.add_subplot(gs[:, 0])
         ax_pos = fig.add_subplot(gs[0, 1])
@@ -108,19 +121,10 @@ class FuseVideoAndBoxingMetrics(
             fig,
             update,
             frames=num_frames,
-            interval=1000 / 15,
+            interval=int(1e3 / video_data.fps),
             blit=True,
         )
-        
-        output_dir = Path("output")
-        output_dir.mkdir(exist_ok=True)
-        output_filename = (
-            f"{video_data.config.path.stem}_{joint.name}_angular_kinematics.mp4"
-        )
-        output_path = output_dir / output_filename
-        plt.show()
-        anim.save(output_path, writer="ffmpeg", fps=15)
-        return output_path
+        return anim
 
     def execute(
         self,
@@ -131,7 +135,9 @@ class FuseVideoAndBoxingMetrics(
 
         # Figure with two rows: top for video, bottom for metrics
         fig = plt.figure(figsize=(14, 6))
-        gs = gridspec.GridSpec(2, 3, figure=fig, width_ratios=[1, 3,2])
+        gs = gridspec.GridSpec(
+            2, 3, figure=fig, width_ratios=[1, 3, 2]
+        )
 
         ax_video = fig.add_subplot(gs[:, 0])
         ax_punch = fig.add_subplot(gs[0, 1])
@@ -176,19 +182,14 @@ class FuseVideoAndBoxingMetrics(
 
         # Plot rotation metrics
         cursor_line_rotation_metrics = None
-        if (
-            boxing_metrics.hip_rotation_velocity_magnitude
-            is not None
-        ):
-            hip_vel = (
-                boxing_metrics.hip_rotation_velocity_magnitude
-            )
+        if boxing_metrics.hip_rotation_velocity_magnitude is not None:
+            hip_vel = boxing_metrics.hip_rotation_velocity_magnitude
             ax_rotation.plot(
                 range(num_frames),
                 hip_vel,
                 color="purple",
                 label="hip",
-            )        
+            )
 
         if (
             boxing_metrics.shoulder_rotation_velocity_magnitude
@@ -215,14 +216,21 @@ class FuseVideoAndBoxingMetrics(
             0, color="k", linestyle="--"
         )
 
-        ax_com.set_xlabel('X')
-        ax_com.set_ylabel('Z')
-        ax_com.set_title('COM XZ trajectory')
+        ax_com.set_xlabel("X")
+        ax_com.set_ylabel("Z")
+        ax_com.set_title("COM XZ trajectory")
         ax_com.grid(True)
-        ax_com.axis('equal')
-        ax_com.plot(boxing_metrics.center_of_mass[:, 0], boxing_metrics.center_of_mass[:,2], 'bo', alpha=0.2)
-        com_marker, = ax_com.plot([], [], 'g*', animated=True, ms=50, mec='black')
-        com_marker.set_data([], [])        
+        ax_com.axis("equal")
+        ax_com.plot(
+            boxing_metrics.center_of_mass[:, 0],
+            boxing_metrics.center_of_mass[:, 2],
+            "bo",
+            alpha=0.2,
+        )
+        (com_marker,) = ax_com.plot(
+            [], [], "g*", animated=True, ms=50, mec="black"
+        )
+        com_marker.set_data([], [])
 
         # Display first video frame
         frame_rgb = cv2.cvtColor(
@@ -238,14 +246,17 @@ class FuseVideoAndBoxingMetrics(
             )
             im.set_data(frame_rgb)
             ax_video.set_title(f"Frame {frame_idx+1}/{num_frames}")
-            com_marker.set_data([boxing_metrics.center_of_mass[frame_idx, 0]], [boxing_metrics.center_of_mass[frame_idx, 2]])
+            com_marker.set_data(
+                [boxing_metrics.center_of_mass[frame_idx, 0]],
+                [boxing_metrics.center_of_mass[frame_idx, 2]],
+            )
             cursor_line_punch_metrics.set_xdata([frame_idx])
             cursor_lines = [cursor_line_punch_metrics]
             if cursor_line_rotation_metrics:
                 cursor_line_rotation_metrics.set_xdata([frame_idx])
                 cursor_lines.append(cursor_line_rotation_metrics)
-        
-            return cursor_lines + [im, com_marker] 
+
+            return cursor_lines + [im, com_marker]
 
         anim = FuncAnimation(
             fig,
