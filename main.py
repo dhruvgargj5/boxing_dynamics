@@ -26,6 +26,7 @@ from mediapipe.tasks.python.vision.pose_landmarker import (
 )
 from mediapipe.tasks.python import BaseOptions
 
+
 # ---------------------------------------------------------------------
 # WRAPPER FUNCTION: For Hugging Face / Gradio / API use
 # ---------------------------------------------------------------------
@@ -46,11 +47,14 @@ def process_video(
     This wraps the CLI main() so HF Spaces or Gradio can call it directly.
     """
     return _run_pipeline(
-        video_path=video_path,
-        name=name,
-        scale_factor=scale_factor,
-        model_fidelity=model_fidelity,
-        debug_logging=debug_logging,
+        video_path,
+        output_dir,
+        no_metrics,
+        debug_logging,
+        scale_factor,
+        model_fidelity,
+        angular_kinematics_joints,
+        linear_kinematics_joints,
     )
 
 
@@ -83,7 +87,7 @@ def _run_pipeline(
     # Build video configuration dynamically
     # Stage 1: Load video
     video_config = VideoConfiguration(
-        name=name,
+        name=video_path.stem,
         path=Path(video_path),
         scale_factor=scale_factor,
     )
@@ -158,7 +162,7 @@ def _run_pipeline(
         logging.info(f"Metrics video saved to: {metrics_out_path}")
     logging.info("Finished BoxingDynamics pipeline")
 
-    return str(output_path)
+    return str(output_dir)
 
 
 # ---------------------------------------------------------------------
@@ -229,24 +233,26 @@ def _run_pipeline(
     multiple=True,
     help="Which joint angular kinematics to plot.",
 )
-def main(video_path: Path,
+def main(
+    video_path: Path,
     output_dir: Path,
     no_metrics: bool,
     debug_logging: bool,
     scale_factor: float,
     model_fidelity,
     angular_kinematics_joints,
-    linear_kinematics_joints):
+    linear_kinematics_joints,
+):
     """CLI wrapper: python main.py file.mp4"""
     process_video(
-      video_path,
-      output_dir,
-      no_metrics,
-      debug_logging
-      scale_factor,
-      model_fidelity,
-      angular_kinematics_joints,
-      linear_kinematics_joints
+        video_path,
+        output_dir,
+        no_metrics,
+        debug_logging,
+        scale_factor,
+        model_fidelity,
+        angular_kinematics_joints,
+        linear_kinematics_joints,
     )
 
 
