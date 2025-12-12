@@ -40,7 +40,7 @@ class Frame(NamedTuple):
 @dataclass
 class VideoData:
     frames: List[Frame]
-    fps: float
+    fps: int
     config: VideoConfiguration
 
 
@@ -58,16 +58,16 @@ class AddArrowsStageInput(NamedTuple):
 class WorldLandmarkLinearKinematicVariables:
     # (Time/frame, landmark, linear pos/vel/accel (3))
     position: np.ndarray
-    velocity: Optional[np.ndarray] = None
-    acceleration: Optional[np.ndarray] = None
+    velocity: np.ndarray
+    acceleration: np.ndarray
 
 
 @dataclass
 class AngularKinematicVariables:
     # (Time/frame, joint, pos/vel/accel (1))
     position: np.ndarray
-    velocity: Optional[np.ndarray] = None
-    acceleration: Optional[np.ndarray] = None
+    velocity: np.ndarray
+    acceleration: np.ndarray
 
 
 @dataclass
@@ -88,5 +88,8 @@ class JointAngularKinematicVariables:
 class BoxingPunchMetrics:
     right_wrist_punching_velocity_magnitude: np.ndarray
     left_wrist_punching_velocity_magnitude: np.ndarray
+    center_of_mass:  np.ndarray
+    shoulder_position: np.ndarray # (T, 3, L/R)
+    hip_position: np.ndarray
     hip_rotation_velocity_magnitude: Optional[np.ndarray] = None
     shoulder_rotation_velocity_magnitude: Optional[np.ndarray] = None

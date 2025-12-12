@@ -31,9 +31,10 @@ class ExtractWorldLandmarkLinearKinematics(
             input
         )
         velocities = np.gradient(positions, axis=0)
+        accelerations = np.gradient(velocities, axis=0)
         self.logger.info("Finishing ExtractWorldLandmarkLinearKinematics stage")
         return WorldLandmarkLinearKinematicVariables(
-            positions, velocity=velocities
+            positions, velocity=velocities, acceleration=accelerations
         )
 
 
@@ -53,10 +54,13 @@ class ExtractJointAngularKinematics(
             PoseLandmark.LEFT_KNEE,
             PoseLandmark.RIGHT_KNEE,
         ]
-        self.logger.info(f"Desired joints: {desired_joints}")
+        self.logger.info(f"Desired joints for angular kinematics: {desired_joints}")
         joint_3d_angles = np.zeros(
             (input.position.shape[0], len(desired_joints))
         )
+
+        joint_3d_angular_vel = np.zeros_like(joint_3d_angles)
+        joint_3d_angular_accel = np.zeros_like(joint_3d_angles)
 
         for joint in desired_joints:
             proximal_limb_vector = (
@@ -67,13 +71,23 @@ class ExtractJointAngularKinematics(
                 input.position[:, JOINTS[joint].joint_landmark]
                 - input.position[:, JOINTS[joint].child_landmark]
             )
-            joint_3d_angles[:, JOINTS[joint].index] = (
+            angular_positions = (
                 calculate_nominal_joint_angles_from_time_series(
                     proximal_limb_vector, distal_limb_vector
                 )
             )
+            angular_vel = np.gradient(angular_positions)
+            angular_accel = np.gradient(angular_vel)
+
+            joint_3d_angles[:, JOINTS[joint].index] = angular_positions
+            joint_3d_angular_vel[:, JOINTS[joint].index] = angular_vel
+            joint_3d_angular_accel[:, JOINTS[joint].index] = angular_accel
         return JointAngularKinematicVariables(
-            AngularKinematicVariables(joint_3d_angles)
+            AngularKinematicVariables(
+                joint_3d_angles,
+                joint_3d_angular_vel,
+                joint_3d_angular_accel,
+            )
         )
 
 
@@ -105,11 +119,12 @@ def mediapipe_human_frame_landmark_to_position_array(
     for frame_idx, landmarker_result in enumerate(
         time_series_landmarks
     ):
-        for landmark_idx, pose_landmark in enumerate(
-            landmarker_result.pose_world_landmarks[0]
-        ):
-            positions[frame_idx, landmark_idx, :] = np.array(
-                [pose_landmark.x, pose_landmark.y, pose_landmark.z]
-            )
+        if landmarker_result.pose_world_landmarks:
+            for landmark_idx, pose_landmark in enumerate(
+                landmarker_result.pose_world_landmarks[0]
+            ):
+                positions[frame_idx, landmark_idx, :] = np.array(
+                    [pose_landmark.x, pose_landmark.y, pose_landmark.z]
+                )
 
     return positions
