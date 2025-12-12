@@ -42,6 +42,7 @@ class CalculateBoxingMetrics(
                 hip_position=self.get_hip_joints_over_time(
                     input.position
                 ),
+                heel_position=self.get_heel_joints_over_time(input.position),
                 hip_rotation_velocity_magnitude=self.calculate_hip_rotation(
                     input
                 ),
@@ -67,6 +68,14 @@ class CalculateBoxingMetrics(
             [
                 position[:, PoseLandmark.LEFT_HIP],
                 position[:, PoseLandmark.RIGHT_HIP],
+            ],
+            axis=-1,
+        )
+    def get_heel_joints_over_time(self, position: np.ndarray):
+        return np.stack(
+            [
+                position[:, PoseLandmark.LEFT_HEEL],
+                position[:, PoseLandmark.RIGHT_HEEL],
             ],
             axis=-1,
         )
@@ -170,7 +179,7 @@ class CalculateBoxingMetrics(
             + com_rl("calf", "L")
             + com_rl("foot", "R")
             + com_rl("foot", "L")
-        )
+        ) / sum(mass.values())
 
         return com
 

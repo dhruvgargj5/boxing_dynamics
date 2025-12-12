@@ -127,6 +127,14 @@ def _run_pipeline(
             logging.info(
                 f"Outputting linear kinematics for {joint.name}"
             )
+            linear_anim = video_fuser.PlotJointLinearKinematics((video_data, linear_kinematics, landmarkers), joint)
+            linear_out_path = (
+                output_dir / f"{joint.name}_linear_kinematics.MP4"
+            )
+            linear_anim.save(linear_out_path, writer='ffmpeg', fps=video_data.fps)
+            logging.info(
+                f"Linear kinematics video saved to: {linear_out_path}"
+            )            
     if angular_kinematics_joints:
         for joint_name in angular_kinematics_joints:
             joint = PoseLandmark[joint_name.upper()]
@@ -151,10 +159,10 @@ def _run_pipeline(
                 fps=video_data.fps,
             )
             logging.info(
-                f"Kinematics video saved to: {kinematics_out_path}"
+                f"Angular kinematics video saved to: {kinematics_out_path}"
             )
     if not no_metrics:
-        animation = video_fuser.execute((video_data, boxing_metrics))
+        animation = video_fuser.execute((video_data, boxing_metrics, landmarkers))
         metrics_out_path = output_dir / "metrics.MP4"
         animation.save(
             metrics_out_path, writer="ffmpeg", fps=video_data.fps
