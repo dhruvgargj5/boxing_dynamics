@@ -1,0 +1,18 @@
+
+{
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "name": "Python: main.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+            "args" : ["https://drive.google.com/file/d/1h8rsqoLqw-2GK_uP_wPZetDKFgwBjc6N/view?usp=sharing", "--name" ,"goodRightHook.mp4"]
+        }
+    ]
+}
+            // "args": ["media/realspeed/goodRightHook.MP4"]
+ 

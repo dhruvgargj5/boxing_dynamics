@@ -7,7 +7,6 @@ from pipeline.pipeline import StageBase, LandmarkingStageInput
 
 from typing import List
 
-
 class ExtractHumanPoseLandmarks(
     StageBase[
         LandmarkingStageInput,

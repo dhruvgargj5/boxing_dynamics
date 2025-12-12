@@ -1,6 +1,10 @@
 import cv2
 import numpy as np
+import gdown
+import os
+import re
 
+from pathlib import Path
 from pipeline.pipeline import (
     StageBase,
     VideoConfiguration,
@@ -8,10 +12,19 @@ from pipeline.pipeline import (
     Frame,
 )
 
-
 class VideoLoader(StageBase[VideoConfiguration, VideoData]):
     def execute(self, input: VideoConfiguration) -> VideoData:
         self.logger.info("Starting VideoLoader stage")
+        
+        # Resolve path & download Google Drive files, if needed
+        resolved_path = _resolve_input_path(str(input.path))
+        input.path = Path(resolved_path)
+        
+        # Ensure the name arg is set
+        if input.name is None:
+            # Use the input filename without extension
+            input.name = input.path.stem
+        
         cap = cv2.VideoCapture(str(input.path))
 
         frames = []

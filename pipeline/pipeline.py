@@ -2,6 +2,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from mediapipe.tasks.python.vision.pose_landmarker import (
     PoseLandmarkerOptions,
+    PoseLandmarkerResult,
 )
 import numpy as np
 
@@ -47,6 +48,11 @@ class LandmarkingStageInput(NamedTuple):
     video_data: VideoData
     landmarking_options: PoseLandmarkerOptions
 
+
+class AddArrowsStageInput(NamedTuple):
+    video_data: VideoData
+    landmarkers: List[PoseLandmarkerResult]
+    save_video: bool    
 
 @dataclass
 class WorldLandmarkLinearKinematicVariables:
