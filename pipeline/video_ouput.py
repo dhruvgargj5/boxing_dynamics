@@ -259,13 +259,13 @@ class FuseVideoAndBoxingMetrics(
         ax_punch.plot(
             range(num_frames),
             left_vel,
-            color="blue",
+            color="orange",
             label="Left Wrist",
         )
         ax_punch.plot(
             range(num_frames),
             right_vel,
-            color="red",
+            color="purple",
             label="Right Wrist",
         )
         ax_punch.legend(loc="upper right")
@@ -312,23 +312,24 @@ class FuseVideoAndBoxingMetrics(
 
         ax_com.set_xlabel("X")
         ax_com.set_ylabel("Z")
-        ax_com.set_title("COM XZ trajectory")
+        ax_com.set_title("Center of Mass")
         ax_com.grid(True)
         ax_com.axis("equal")
         ax_com.plot(
             boxing_metrics.center_of_mass[:, 0],
             boxing_metrics.center_of_mass[:, 2],
-            color="purple",
+            color="green",
             marker='o',
             linestyle='None',
             alpha=0.2,
         )
         (com_marker,) = ax_com.plot(
-            [], [], color='purple', marker='*', animated=True, ms=20, mec="black", label='COM', linestyle='None'
+            [], [], color='green', marker='*', animated=True, ms=20, mec="black", label='COM', linestyle='None'
         )
+        idx1, idx2 = 0, 2
         def get_positions(ii, key):
             pos = getattr(boxing_metrics, key)
-            return [pos[ii, 0, 0], pos[ii, 0, 1]], [pos[ii, 2, 0], pos[ii, 2, 1]]
+            return [pos[ii, idx1, 0], pos[ii, idx1, 1]], [pos[ii, idx2, 0], pos[ii, idx2, 1]]
         x_s, z_s = get_positions(0, 'shoulder_position')
         (shoulder_line, ) = ax_com.plot(x_s, z_s, label="shoulder", color='red')
         x_h, z_h = get_positions(0, 'hip_position')
@@ -336,10 +337,10 @@ class FuseVideoAndBoxingMetrics(
         x_f, z_f = get_positions(0, 'heel_position')
         (heel_line, ) = ax_com.plot(x_f, z_f, label="heel", color='black')
         ax_com.legend()
-        xmin = min(np.min(boxing_metrics.shoulder_position[:, 0, :]), np.min(boxing_metrics.hip_position[:, 0, :]))
-        xmax = max(np.max(boxing_metrics.shoulder_position[:, 0, :]), np.max(boxing_metrics.hip_position[:, 0, :]))
-        zmin= min(np.min(boxing_metrics.shoulder_position[:, 2, :]), np.min(boxing_metrics.hip_position[:, 2, :]))
-        zmax= max(np.max(boxing_metrics.shoulder_position[:, 2, :]), np.max(boxing_metrics.hip_position[:, 2, :]))
+        xmin = min(np.min(boxing_metrics.shoulder_position[:, idx1, :]), np.min(boxing_metrics.hip_position[:, idx1, :]))
+        xmax = max(np.max(boxing_metrics.shoulder_position[:, idx1, :]), np.max(boxing_metrics.hip_position[:, idx1, :]))
+        zmin= min(np.min(boxing_metrics.shoulder_position[:, idx2, :]), np.min(boxing_metrics.hip_position[:, idx2, :]))
+        zmax= max(np.max(boxing_metrics.shoulder_position[:, idx2, :]), np.max(boxing_metrics.hip_position[:, idx2, :]))
         ax_com.set(xlim=(xmin, xmax), ylim=(zmin, zmax))
         # Display first video frame
         frame_rgb = cv2.cvtColor(
