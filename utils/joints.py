@@ -16,6 +16,13 @@ class Joint:
     def get_distal_limb_landmark_indexes(self):
         return [self.joint_landmark.value, self.child_landmark.value]
 
+    def get_landmarks(self):
+        return [
+            self.parent_landmark,
+            self.joint_landmark,
+            self.child_landmark,
+        ]
+
 
 joint_definitions = [
     (

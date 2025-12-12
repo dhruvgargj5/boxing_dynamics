@@ -105,8 +105,14 @@ class FuseVideoAndBoxingMetrics(
         frame_rgb = cv2.cvtColor(
             video_data.frames[0].frame, cv2.COLOR_BGR2RGB
         )
+
+        joint_landmarks = JOINTS[joint].get_landmarks()
+        joint_connections = [(0, 1), (1, 2)]
         annotated_frame = draw_landmarks_on_image(
-            frame_rgb, landmarkers[0]
+            frame_rgb,
+            landmarkers[0],
+            joint_landmarks,
+            joint_connections,
         )
         im = ax_video.imshow(annotated_frame)
         ax_video.axis("off")
@@ -117,7 +123,10 @@ class FuseVideoAndBoxingMetrics(
                 video_data.frames[frame_idx].frame, cv2.COLOR_BGR2RGB
             )
             annotated_frame = draw_landmarks_on_image(
-                frame_rgb, landmarkers[frame_idx]
+                frame_rgb,
+                landmarkers[frame_idx],
+                joint_landmarks,
+                joint_connections,
             )
             im.set_data(annotated_frame)
             ax_video.set_title(f"Frame {frame_idx+1}/{num_frames}")
